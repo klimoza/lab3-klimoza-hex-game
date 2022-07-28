@@ -13,6 +13,7 @@ impl Cell {
     pub fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
+
     pub fn get_neighbours(&self, field_size: usize) -> Vec<Cell> {
         require!(
             self.x < field_size && self.y < field_size,
@@ -39,6 +40,13 @@ impl Cell {
             neighbours.push(Cell { x: x - 1, y: y + 1 });
         }
         return neighbours;
+    }
+
+    pub fn symm(&self) -> Self {
+        Self {
+            x: self.y,
+            y: self.x,
+        }
     }
 }
 
@@ -158,5 +166,11 @@ mod cell_tests {
                 Cell::new(3, 5)
             ]
         );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_cell_of_bounds() {
+        Cell::new(3, 4).get_neighbours(4);
     }
 }

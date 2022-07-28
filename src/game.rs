@@ -52,7 +52,7 @@ impl Game {
         }
     }
 
-    pub fn swap_rule(&mut self) -> (usize, usize) {
+    pub fn swap_rule(&mut self) -> Cell {
         require!(
             self.turn == 1,
             "Swap rule can be applied only on the second player first turn"
@@ -73,14 +73,14 @@ impl Game {
         } else if (non_zero_byte.1 >> 6) & 1 == 1 {
             bit_number += 6;
         }
-        let (x, y) = self.board.get_coords(bit_number);
-        self.board.set_cell(&Cell { x, y }, 0);
-        self.board.set_cell(&Cell { y, x }, 2);
+        let cell = self.board.get_coords(bit_number);
+        self.board.set_cell(&cell, 0);
+        self.board.set_cell(&cell.symm(), 2);
         if env::block_height() != self.current_block_height {
             self.prev_block_height = self.current_block_height;
             self.current_block_height = env::block_height();
         }
-        (x, y)
+        cell
     }
 }
 

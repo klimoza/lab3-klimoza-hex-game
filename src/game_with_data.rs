@@ -34,9 +34,9 @@ impl GameWithData {
                 self.process_cell(cell);
             }
             (false, true, MoveType::SWAP, _) => {
-                let (x, y) = self.game.swap_rule();
-                self.data.set_cell(&Cell { x, y }, 0);
-                self.process_cell(Cell { y, x });
+                let cell = self.game.swap_rule();
+                self.data.set_cell(&cell, 0);
+                self.process_cell(cell.symm());
             }
             _ => env::panic_str("Incorrect predecessor account, or incorrect move type."),
         }
