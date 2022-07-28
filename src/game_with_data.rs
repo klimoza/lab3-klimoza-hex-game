@@ -20,17 +20,18 @@ impl GameWithData {
             data: Board::new(field_size),
         }
     }
+
     pub fn make_move(&mut self, move_type: MoveType, cell: Option<Cell>) {
         let first_player = &self.game.first_player;
         let second_player = &self.game.second_player;
         let acc = &env::predecessor_account_id();
         match (acc == first_player, acc == second_player, move_type, cell) {
             (true, false, MoveType::PLACE, Some(cell)) => {
-                self.game.first_player_move(&cell);
+                self.game.place_counter(&cell, 1);
                 self.process_cell(cell);
             }
             (false, true, MoveType::PLACE, Some(cell)) => {
-                self.game.second_player_move(&cell);
+                self.game.place_counter(&cell, 2);
                 self.process_cell(cell);
             }
             (false, true, MoveType::SWAP, _) => {
@@ -41,6 +42,7 @@ impl GameWithData {
             _ => env::panic_str("Incorrect predecessor account, or incorrect move type."),
         }
     }
+
     pub fn process_cell(&mut self, cell: Cell) {
         let color = self.game.board.get_cell(&cell);
         let (mut border1, mut border2) = if color == 1 {
