@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, AccountId};
+use near_sdk::{env, require, AccountId};
 use std::collections::VecDeque;
 
 use crate::board::Board;
@@ -22,28 +22,37 @@ impl GameWithData {
     }
 
     pub fn make_move(&mut self, move_type: MoveType, cell: Option<Cell>) {
-        let first_player = &self.game.first_player;
-        let second_player = &self.game.second_player;
-        let acc = &env::predecessor_account_id();
-        match (acc == first_player, acc == second_player, move_type, cell) {
-            (true, false, MoveType::PLACE, Some(cell)) => {
-                self.game.place_counter(&cell, 1);
+        match (move_type, cell) {
+            (MoveType::PLACE, Some(cell)) => {
+                if self.game.turn % 2 == 0 {
+                    require!(
+                        env::predecessor_account_id() == self.game.first_player,
+                        "Incorrect predecessor account"
+                    );
+                    self.game.place_counter(&cell, 1);
+                } else {
+                    require!(
+                        env::predecessor_account_id() == self.game.second_player,
+                        "Incorrect predecessor account"
+                    );
+                    self.game.place_counter(&cell, 2);
+                }
                 self.process_cell(cell);
             }
-            (false, true, MoveType::PLACE, Some(cell)) => {
-                self.game.place_counter(&cell, 2);
-                self.process_cell(cell);
-            }
-            (false, true, MoveType::SWAP, _) => {
+            (MoveType::SWAP, _) => {
+                require!(
+                    env::predecessor_account_id() == self.game.second_player,
+                    "Incorrect predecessor account"
+                );
                 let cell = self.game.swap_rule();
                 self.data.set_cell(&cell, 0);
                 self.process_cell(cell.symm());
             }
-            _ => env::panic_str("Incorrect predecessor account, or incorrect move type."),
+            _ => env::panic_str("Incorrect move args"),
         }
     }
 
-    pub fn process_cell(&mut self, cell: Cell) {
+    fn process_cell(&mut self, cell: Cell) {
         let color = self.game.board.get_cell(&cell);
         let (mut border1, mut border2) = if color == 1 {
             (cell.y == 0, cell.y + 1 == self.data.size)
@@ -64,7 +73,8 @@ impl GameWithData {
             self.bfs(cell, color, 2);
         }
     }
-    pub fn bfs(&mut self, cell: Cell, color: u8, border: u8) {
+
+    fn bfs(&mut self, cell: Cell, color: u8, border: u8) {
         self.data.set_cell(&cell, border);
         let mut q: VecDeque<Cell> = VecDeque::new();
         q.push_back(cell);
@@ -79,7 +89,7 @@ impl GameWithData {
             if good_neighbours
                 .clone()
                 .into_iter()
-                .any(|c| self.data.get_cell(&c) > 0)
+                .any(|c| self.data.get_cell(&c) != 0)
             {
                 self.game.is_finished = true;
                 return;
@@ -89,5 +99,149 @@ impl GameWithData {
                 q.push_back(Cell { x: c.x, y: c.y });
             }
         }
+    }
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod game_with_board_tests {
+    use near_sdk::{
+        test_utils::{accounts, VMContextBuilder},
+        testing_env,
+    };
+
+    use super::*;
+
+    fn get_context(account: AccountId) -> near_sdk::VMContext {
+        VMContextBuilder::new()
+            .predecessor_account_id(account)
+            .build()
+    }
+
+    #[test]
+    fn test_bfs() {
+        let mut test_game = GameWithData::new(accounts(0), accounts(1), 5);
+        test_game.game.board.set_cell(&Cell::new(0, 0), 1);
+        test_game.game.board.set_cell(&Cell::new(0, 1), 1);
+        test_game.game.board.set_cell(&Cell::new(0, 2), 1);
+
+        test_game.game.board.set_cell(&Cell::new(4, 4), 1);
+        test_game.game.board.set_cell(&Cell::new(3, 4), 1);
+
+        test_game.game.board.set_cell(&Cell::new(0, 3), 1);
+        test_game.game.board.set_cell(&Cell::new(1, 2), 1);
+
+        test_game.game.board.set_cell(&Cell::new(4, 0), 2);
+
+        test_game.game.board.set_cell(&Cell::new(2, 1), 1);
+
+        test_game.game.board.set_cell(&Cell::new(3, 0), 2);
+
+        let mut test_data = Board::new(5);
+        test_data.set_cell(&Cell::new(0, 0), 2);
+        test_data.set_cell(&Cell::new(0, 1), 2);
+        test_data.set_cell(&Cell::new(0, 2), 2);
+        test_data.set_cell(&Cell::new(0, 3), 2);
+        test_data.set_cell(&Cell::new(1, 2), 2);
+        test_data.set_cell(&Cell::new(2, 1), 2);
+
+        test_game.bfs(Cell::new(0, 2), 1, 2);
+        assert_eq!(test_game.data, test_data);
+
+        test_data.set_cell(&Cell::new(4, 0), 2);
+        test_data.set_cell(&Cell::new(3, 0), 2);
+
+        test_game.bfs(Cell::new(3, 0), 2, 2);
+        assert_eq!(test_game.data, test_data);
+    }
+
+    #[test]
+    fn test_process_cell() {
+        let mut test_game = GameWithData::new(accounts(0), accounts(1), 5);
+        test_game.game.board.set_cell(&Cell::new(0, 0), 1);
+        test_game.game.board.set_cell(&Cell::new(0, 1), 1);
+        test_game.game.board.set_cell(&Cell::new(0, 2), 1);
+
+        test_game.game.board.set_cell(&Cell::new(4, 4), 1);
+        test_game.game.board.set_cell(&Cell::new(3, 4), 1);
+
+        test_game.game.board.set_cell(&Cell::new(0, 3), 1);
+        test_game.game.board.set_cell(&Cell::new(1, 2), 1);
+
+        test_game.game.board.set_cell(&Cell::new(4, 0), 2);
+
+        test_game.game.board.set_cell(&Cell::new(2, 1), 1);
+
+        test_game.game.board.set_cell(&Cell::new(3, 0), 2);
+
+        let mut test_data = Board::new(5);
+        test_data.set_cell(&Cell::new(0, 0), 1);
+        test_data.set_cell(&Cell::new(0, 1), 1);
+        test_data.set_cell(&Cell::new(0, 2), 1);
+        test_data.set_cell(&Cell::new(0, 3), 1);
+        test_data.set_cell(&Cell::new(1, 2), 1);
+        test_data.set_cell(&Cell::new(2, 1), 1);
+
+        test_game.process_cell(Cell::new(0, 1));
+        assert_eq!(test_game.data, Board::new(5));
+
+        test_game.process_cell(Cell::new(0, 0));
+        assert_eq!(test_game.data, test_data);
+    }
+
+    #[test]
+    fn test_make_move() {
+        let mut test_game = GameWithData::new(accounts(0), accounts(1), 5);
+        let mut test_data = Board::new(5);
+        assert_eq!(test_game.data, test_data);
+
+        testing_env!(get_context(accounts(0)));
+        test_game.make_move(MoveType::PLACE, Some(Cell::new(3, 0)));
+        test_data.set_cell(&Cell::new(3, 0), 1);
+        assert_eq!(test_game.data, test_data);
+
+        testing_env!(get_context(accounts(1)));
+        test_game.make_move(MoveType::SWAP, None);
+        test_data.set_cell(&Cell::new(3, 0), 0);
+        test_data.set_cell(&Cell::new(0, 3), 1);
+        assert_eq!(test_game.data, test_data);
+
+        testing_env!(get_context(accounts(0)));
+        test_game.make_move(MoveType::PLACE, Some(Cell::new(4, 4)));
+        test_data.set_cell(&Cell::new(4, 4), 2);
+        assert_eq!(test_game.data, test_data);
+
+        testing_env!(get_context(accounts(1)));
+        test_game.make_move(MoveType::PLACE, Some(Cell::new(1, 2)));
+        test_data.set_cell(&Cell::new(1, 2), 1);
+        assert_eq!(test_game.data, test_data);
+
+        testing_env!(get_context(accounts(0)));
+        test_game.make_move(MoveType::PLACE, Some(Cell::new(4, 2)));
+        assert_eq!(test_game.data, test_data);
+
+        testing_env!(get_context(accounts(1)));
+        test_game.make_move(MoveType::PLACE, Some(Cell::new(3, 2)));
+        assert_eq!(test_game.data, test_data);
+
+        testing_env!(get_context(accounts(0)));
+        test_game.make_move(MoveType::PLACE, Some(Cell::new(4, 3)));
+        test_data.set_cell(&Cell::new(4, 2), 2);
+        test_data.set_cell(&Cell::new(4, 3), 2);
+        assert_eq!(test_game.data, test_data);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_make_move_incorrect_args() {
+        let mut test_game = GameWithData::new(accounts(0), accounts(1), 5);
+        test_game.make_move(MoveType::PLACE, None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_make_move_wrong_player() {
+        let mut test_game = GameWithData::new(accounts(0), accounts(1), 5);
+        testing_env!(get_context(accounts(1)));
+        test_game.make_move(MoveType::PLACE, Some(Cell::new(0, 0)));
     }
 }

@@ -5,7 +5,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::cell::Cell;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Board {
     pub size: usize,
