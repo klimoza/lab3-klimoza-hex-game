@@ -2,7 +2,7 @@ use near_sdk::require;
 
 use crate::*;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Cell {
     pub x: usize,
@@ -53,6 +53,12 @@ impl Cell {
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod cell_tests {
     use super::Cell;
+
+    impl PartialEq for Cell {
+        fn eq(&self, other: &Self) -> bool {
+            self.x == other.x && self.y == other.y
+        }
+    }
 
     #[test]
     fn test_cell_neighbours_single() {

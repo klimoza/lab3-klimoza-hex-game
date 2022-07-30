@@ -104,12 +104,26 @@ impl GameWithData {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod game_with_board_tests {
+    use std::fmt::Debug;
+
     use near_sdk::{
         test_utils::{accounts, VMContextBuilder},
         testing_env,
     };
 
     use super::*;
+
+    impl PartialEq for Board {
+        fn eq(&self, other: &Self) -> bool {
+            self.size == other.size && self.field == other.field
+        }
+    }
+
+    impl Debug for Board {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Board").field("size", &self.size).field("field", &self.field).finish()
+        }
+    }
 
     fn get_context(account: AccountId) -> near_sdk::VMContext {
         VMContextBuilder::new()

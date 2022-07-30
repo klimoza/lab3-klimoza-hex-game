@@ -1,11 +1,11 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::Base64VecU8;
-use near_sdk::require;
+use near_sdk::{require, env};
 use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::cell::Cell;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Board {
     pub size: usize,
@@ -53,6 +53,35 @@ impl Board {
 
     pub fn get_coords(&self, bit_number: usize) -> Cell {
         Cell::new(bit_number / 2 % self.size, bit_number / 2 / self.size)
+    }
+
+    pub fn get_board_as_strings(&self) -> Vec<String> {
+        let mut vector = Vec::new();
+
+        for i in 0..self.size {
+            let mut result: String = (0..i).into_iter().map(|_| ' ').collect();
+            for j in 0..self.size {
+                let symbol = match self.get_cell(&Cell::new(j, i)) {
+                    0 => '.',
+                    1 => 'R',
+                    2 => 'B',
+                    _ => unreachable!()
+                };
+                result.push(symbol);
+                if j + 1 != self.size {
+                    result.push(' ');
+                }
+            }
+            vector.push(result);
+        }
+
+        vector
+    }
+
+    pub fn debug_logs(&self) {
+        self.get_board_as_strings()
+            .into_iter()
+            .for_each(|s| env::log_str(&s));
     }
 }
 
