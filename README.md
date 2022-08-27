@@ -10,6 +10,8 @@ The project is divided into separate files, each file contains one of the struct
 
 ## Interacting with contract
 
+Deployed game contract in testnet: `hex-game.klimoza.testnet`
+
 #### `create_game(first_player: AccountId, second_player: AccountId, field_size: usize) -> GameIndex`
 
 Creates new game with given parameters and returns index of created game. For example:
