@@ -14,16 +14,14 @@ The project is divided into separate files, each file contains one of the struct
 
 Creates new game with given parameters and returns index of created game. For example:
 ```console
-➜ near call crossword.klimoza.testnet create_game '{"first_player": "crossword.klimoza.testnet", "second_player": "klimoza.testnet", "field_size": 2}' --accountId crossword.klimoza.testnet
-Scheduling a call: crossword.klimoza.testnet.create_game({"first_player": "crossword.klimoza.testnet", "second_player": "klimoza.testnet", "field_size": 2})
+➜ near call hex-game.klimoza.testnet create_game '{"first_player": "crossword.klimoza.testnet", "second_player": "klimoza.testnet", "field_size": 2}' --accountId hex-game.klimoza.testnet --amount 2
+Scheduling a call: hex-game.klimoza.testnet.create_game({"first_player": "crossword.klimoza.testnet", "second_player": "klimoza.testnet", "field_size": 2})
 Doing account.functionCall()
-Receipt: 95QtZWq7chRA4MyftnkPE8Smoi7iQo9kWpeVfxFZGDEV
-	Log [crossword.klimoza.testnet]: Created board:
-	Log [crossword.klimoza.testnet]: . .
-	Log [crossword.klimoza.testnet]:  . .
-Transaction Id BHvhLbLWHhKbmnewLHzMv7XY2y5izssY9spWEdVm6wUE
-To see the transaction in the transaction explorer, please open this url in your browser
-https://explorer.testnet.near.org/transactions/BHvhLbLWHhKbmnewLHzMv7XY2y5izssY9spWEdVm6wUE
+
+	Log [hex-game.klimoza.testnet]: Created board:
+	Log [hex-game.klimoza.testnet]: . .
+	Log [hex-game.klimoza.testnet]:  . .
+
 4
 ```
 
@@ -44,19 +42,17 @@ pub struct Cell {
 ```
 You can omit the `cell` parameter if `move_type` is `SWAP`(i.e. applying swap rule on the current move). For example:
 ```console
-➜ near call crossword.klimoza.testnet make_move '{"index": 4, "move_type": "SWAP"}' --accountId klimoza.testnet
-Scheduling a call: crossword.klimoza.testnet.make_move({"index": 4, "move_type": "SWAP"})
+➜ near call hex-game.klimoza.testnet make_move '{"index": 4, "move_type": "SWAP"}' --accountId klimoza.testnet
+Scheduling a call: hex-game.klimoza.testnet.make_move({"index": 4, "move_type": "SWAP"})
 Doing account.functionCall()
-Receipt: 9SntyX6t9j8jZCZMNb5wMn82k7YQKXoWH8tuYbaNZQs6
-	Log [crossword.klimoza.testnet]: Old board:
-	Log [crossword.klimoza.testnet]: . R
-	Log [crossword.klimoza.testnet]:  . .
-	Log [crossword.klimoza.testnet]: New board:
-	Log [crossword.klimoza.testnet]: . .
-	Log [crossword.klimoza.testnet]:  B .
-Transaction Id FqsxYTzGaHYXvmxk3xYhBR3Mq4rveK5UvzkMNNerL6Th
-To see the transaction in the transaction explorer, please open this url in your browser
-https://explorer.testnet.near.org/transactions/FqsxYTzGaHYXvmxk3xYhBR3Mq4rveK5UvzkMNNerL6Th
+
+	Log [hex-game.klimoza.testnet]: Old board:
+	Log [hex-game.klimoza.testnet]: . R
+	Log [hex-game.klimoza.testnet]:  . .
+	Log [hex-game.klimoza.testnet]: New board:
+	Log [hex-game.klimoza.testnet]: . .
+	Log [hex-game.klimoza.testnet]:  B .
+
 {
   first_player: 'crossword.klimoza.testnet',
   second_player: 'klimoza.testnet',
@@ -71,16 +67,14 @@ https://explorer.testnet.near.org/transactions/FqsxYTzGaHYXvmxk3xYhBR3Mq4rveK5Uv
 #### `get_game(index: GameIndex) -> Option<Game>`
 Returns the game at the given index(if there is one). For example:
 ```console
-➜ near call crossword.klimoza.testnet get_game '{"index": 4}' --accountId crossword.klimoza.testnet
-Scheduling a call: crossword.klimoza.testnet.get_game({"index": 4})
+➜ near call hex-game.klimoza.testnet get_game '{"index": 4}' --accountId hex-game.klimoza.testnet
+Scheduling a call: hex-game.klimoza.testnet.get_game({"index": 4})
 Doing account.functionCall()
-Receipt: Fzjemr6ukV7mWNLNaJLrjxwU7uwnz2wgLfcNRNvLMyEH
-	Log [crossword.klimoza.testnet]: Game board:
-	Log [crossword.klimoza.testnet]: R B
-	Log [crossword.klimoza.testnet]:  B .
-Transaction Id DwpznqSWT8WqsirqFm64e8xHPEu1S3J52FpKsAR4okAQ
-To see the transaction in the transaction explorer, please open this url in your browser
-https://explorer.testnet.near.org/transactions/DwpznqSWT8WqsirqFm64e8xHPEu1S3J52FpKsAR4okAQ
+
+	Log [hex-game.klimoza.testnet]: Game board:
+	Log [hex-game.klimoza.testnet]: R B
+	Log [hex-game.klimoza.testnet]:  B .
+
 {
   first_player: 'crossword.klimoza.testnet',
   second_player: 'klimoza.testnet',
@@ -90,6 +84,25 @@ https://explorer.testnet.near.org/transactions/DwpznqSWT8WqsirqFm64e8xHPEu1S3J52
   prev_block_height: 96244971,
   is_finished: true
 }
+```
+
+#### `check_premium_account(account_id: AccountId) -> bool`
+Checks for a locked, expirable, active Roketo stream going from `account_id` to `hex_game_account`. Returns Promise. For example:
+```
+➜ near call wrap.testnet ft_transfer_call '{"receiver_id": "streaming-r-v2.dcversus.testnet",  "amount": "2200000000000000000000000", "memo": "Roketo transfer", "msg": "{\"Create\":{\"request\":{\"balance\":\"2000000000000000000000000\", \"owner_id\": \"klimoza.testnet\",\"receiver_id\":\"hex-game.klimoza.testnet\",\"token_name\": \"wrap.testnet\", \"tokens_per_sec\":\"6666666666666666666667\", \"is_locked\": true, \"is_expirable\": true}}}"}' --accountId klimoza.testnet --depositYocto 1 --gas 200000000000000
+Doing account.functionCall()
+
+	Log [wrap.testnet]: Transfer 2200000000000000000000000 from klimoza.testnet to streaming-r-v2.dcversus.testnet
+	Log [wrap.testnet]: Memo: Roketo transfer
+
+	Log [wrap.testnet]: Transfer 2100000000000000000000000 from streaming-r-v2.dcversus.testnet to finance-r-v2.dcversus.testnet
+
+'2200000000000000000000000'
+
+➜ near call hex-game.klimoza.testnet check_premium_account '{"account_id": "klimoza.testnet"}' --accountId klimoza.testnet
+Scheduling a call: hex-game.klimoza.testnet.check_premium_account({"account_id": "klimoza.testnet"})
+
+true
 ```
 
 ## Testing

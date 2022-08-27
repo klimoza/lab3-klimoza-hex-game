@@ -2,6 +2,7 @@ use cell::Cell;
 use external::{Stream, StreamStatus};
 use game::{Game, GameIndex};
 use game_with_data::GameWithData;
+use near_contract_standards::non_fungible_token::refund_deposit;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::Vector;
 use near_sdk::serde::{Deserialize, Serialize};
@@ -38,16 +39,22 @@ impl Contract {
         }
     }
 
+    #[payable]
     pub fn create_game(
         &mut self,
         first_player: AccountId,
         second_player: AccountId,
         field_size: Option<usize>,
     ) -> GameIndex {
+        let initial_storage_usage = env::storage_usage();
+
         let index = self.games.len();
         let size = field_size.unwrap_or(11);
         self.games
             .push(&GameWithData::new(first_player, second_player, size));
+
+        let required_storage_in_bytes = env::storage_usage() - initial_storage_usage;
+        refund_deposit(required_storage_in_bytes);
 
         env::log_str("Created board:");
         self.games.get(index).unwrap().game.board.debug_logs();
@@ -102,13 +109,13 @@ impl Contract {
     }
 
     #[private]
-    pub fn check_premium_account_internal(&self, #[callback_result] streams: Vec<Stream>) -> bool {
-        require!(env::current_account_id() == env::predecessor_account_id());
+    pub fn check_premium_account_internal(&self, #[callback_unwrap] streams: Vec<Stream>) -> bool {
         streams.iter().any(|stream| {
             stream.is_locked
                 && stream.is_expirable
                 && stream.status == StreamStatus::Active
                 && stream.receiver_id == env::current_account_id()
+                && stream.available_to_withdraw() != stream.balance
         })
     }
 }
@@ -125,7 +132,7 @@ mod contract_tests {
     use core::fmt::Debug;
     use near_sdk::{
         test_utils::{accounts, VMContextBuilder},
-        testing_env, AccountId,
+        testing_env, AccountId, ONE_NEAR,
     };
 
     use crate::{
@@ -135,6 +142,7 @@ mod contract_tests {
     fn get_context(account: AccountId) -> near_sdk::VMContext {
         VMContextBuilder::new()
             .predecessor_account_id(account)
+            .attached_deposit(10 * ONE_NEAR)
             .build()
     }
 
@@ -181,6 +189,7 @@ mod contract_tests {
 
     #[test]
     fn test_create_get() {
+        testing_env!(get_context(accounts(2)));
         let mut contract = Contract::new(None);
         contract.create_game(accounts(1), accounts(2), Some(3));
         contract.create_game(accounts(4), accounts(3), Some(4));
@@ -197,6 +206,7 @@ mod contract_tests {
 
     #[test]
     fn test_make_move() {
+        testing_env!(get_context(accounts(2)));
         let mut contract = Contract::new(None);
         let id = contract.create_game(accounts(0), accounts(1), Some(5));
 

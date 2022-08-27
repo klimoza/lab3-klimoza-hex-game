@@ -162,6 +162,22 @@ pub struct AccountView {
     pub is_cron_allowed: bool,
 }
 
+pub const TICKS_PER_SECOND: u64 = 10u64.pow(9 as _); // 1e9
+
+impl Stream {
+    pub(crate) fn available_to_withdraw(&self) -> Balance {
+        if self.status == StreamStatus::Active {
+            let period = env::block_timestamp() - self.last_action;
+            std::cmp::min(
+                self.balance,
+                (period / TICKS_PER_SECOND) as u128 * self.tokens_per_sec,
+            )
+        } else {
+            0
+        }
+    }
+}
+
 #[ext_contract(ext_roketo)]
 pub trait Roketo {
     fn get_account_outgoing_streams(
