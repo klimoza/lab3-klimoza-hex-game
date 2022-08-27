@@ -121,7 +121,10 @@ mod game_with_board_tests {
 
     impl Debug for Board {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("Board").field("size", &self.size).field("field", &self.field).finish()
+            f.debug_struct("Board")
+                .field("size", &self.size)
+                .field("field", &self.field)
+                .finish()
         }
     }
 
